@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moldura Marcius Machado 22123</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: 'Montserrat', Arial, sans-serif;
+    background: #12212F;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 60px;
+  }
+  h1 { font-size: 26px; text-align: center; color: #FFD200; margin: 8px 0 4px; }
+  p.sub { text-align: center; color: #cfd8e0; font-size: 16px; margin: 0 0 20px; }
+
+  .editor-wrap {
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    background: #1c3245;
+    display: none;
+  }
+  .img-container {
+    width: 100%;
+    aspect-ratio: 1/1;
+  }
+  .img-container img { display: block; max-width: 100%; }
+  .frame-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+  }
+  .hint {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    background: rgba(18,33,47,.7);
+    padding: 6px 14px;
+    border-radius: 20px;
+    z-index: 21;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .placeholder-box {
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 1/1;
+    border-radius: 16px;
+    background: #1c3245;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #7f97a8;
+    font-size: 18px;
+    text-align: center;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+
+  input[type="file"] { display: none; }
+  .btn {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 14px;
+    padding: 20px;
+    font-size: 22px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary { background: #FFD200; color: #12212F; }
+  .btn-secondary { background: #172B3E; color: #fff; border: 2px solid #FFD200; display: none; }
+
+  .result-box { width: 100%; max-width: 420px; margin-top: 20px; display: none; text-align: center; }
+  .result-title { font-size: 22px; font-weight: 800; color: #7CFFB2; margin-bottom: 8px; }
+  .result-instructions { font-size: 16px; color: #cfd8e0; margin-bottom: 14px; line-height: 1.4; }
+  .result-img { width: 100%; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+
+  /* cropper.js: como a area de recorte sempre cobre o quadro inteiro, nao precisamos do escurecimento */
+  .cropper-modal { display: none; }
+  .cropper-view-box, .cropper-face { border-radius: 0; }
+</style>
+</head>
+<body>
+  <h1>MARCIUS MACHADO 22123</h1>
+  <p class="sub">Coloque a moldura na sua foto</p>
+
+  <div class="placeholder-box" id="placeholderBox">Sua foto vai aparecer aqui</div>
+
+  <div class="editor-wrap" id="editorWrap">
+    <div class="hint">Arraste e belisque pra ajustar</div>
+    <div class="img-container">
+      <img id="cropImg" src="" alt="Sua foto">
+    </div>
+    <img class="frame-overlay" src="images/moldura.png" alt="">
+  </div>
+
+  <input type="file" id="fileInput" accept="image/*">
+  <button class="btn btn-primary" id="chooseBtn">📷&nbsp;&nbsp;ESCOLHER MINHA FOTO</button>
+  <button class="btn btn-secondary" id="downloadBtn">⬇️&nbsp;&nbsp;BAIXAR FOTO PRONTA</button>
+
+  <div class="result-box" id="resultBox">
+    <p class="result-title">✅ Sua foto está pronta!</p>
+    <p class="result-instructions">Se o download não iniciar sozinho, toque e segure a imagem abaixo e escolha "Salvar imagem".</p>
+    <img id="resultImg" class="result-img" alt="Foto pronta com moldura">
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+  <script>
+    const CANVAS_SIZE = 1080; // tamanho oficial recomendado pelo Meta para foto de perfil
+
+    const fileInput = document.getElementById('fileInput');
+    const chooseBtn = document.getElementById('chooseBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const placeholderBox = document.getElementById('placeholderBox');
+    const editorWrap = document.getElementById('editorWrap');
+    const cropImg = document.getElementById('cropImg');
+    const resultBox = document.getElementById('resultBox');
+    const resultImg = document.getElementById('resultImg');
+
+    const frame = new Image();
+    frame.src = 'images/moldura.png';
+
+    let cropper = null;
+
+    chooseBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        cropImg.src = ev.target.result;
+        placeholderBox.style.display = 'none';
+        editorWrap.style.display = 'block';
+        downloadBtn.style.display = 'block';
+        chooseBtn.textContent = '📷  TROCAR FOTO';
+        resultBox.style.display = 'none';
+
+        // forca o container do cropper a ser quadrado (a proporcao da foto original nao importa aqui)
+        const imgContainer = document.querySelector('.img-container');
+        imgContainer.style.height = imgContainer.clientWidth + 'px';
+        const containerSize = imgContainer.clientWidth;
+
+        if (cropper) { cropper.destroy(); }
+        cropper = new Cropper(cropImg, {
+          aspectRatio: 1,
+          viewMode: 1,
+          dragMode: 'move',
+          autoCropArea: 1,
+          background: false,
+          movable: true,
+          zoomable: true,
+          zoomOnTouch: true,
+          zoomOnWheel: true,
+          scalable: false,
+          rotatable: false,
+          cropBoxMovable: false,
+          cropBoxResizable: false,
+          toggleDragModeOnDblclick: false,
+          guides: false,
+          center: false,
+          highlight: false,
+          minCanvasWidth: containerSize,
+          minCanvasHeight: containerSize,
+          ready() {
+            // a foto deve cobrir todo o quadro (como object-fit: cover), nao só caber dentro dele.
+            // usamos zoomTo (metodo oficial do Cropper.js) em vez de mexer direto no canvas,
+            // pra manter os limites internos de arraste corretos.
+            const containerData = cropper.getContainerData();
+            const imageData = cropper.getImageData();
+            const ratio = Math.max(
+              containerData.width / imageData.naturalWidth,
+              containerData.height / imageData.naturalHeight
+            );
+            cropper.zoomTo(ratio);
+            cropper.setCropBoxData({
+              left: 0,
+              top: 0,
+              width: containerData.width,
+              height: containerData.height
+            });
+          }
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!cropper) return;
+      const croppedCanvas = cropper.getCroppedCanvas({
+        width: CANVAS_SIZE,
+        height: CANVAS_SIZE,
+        imageSmoothingQuality: 'high'
+      });
+
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = CANVAS_SIZE;
+      finalCanvas.height = CANVAS_SIZE;
+      const ctx = finalCanvas.getContext('2d');
+      ctx.drawImage(croppedCanvas, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx.drawImage(frame, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      finalCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.download = 'foto-perfil-marcius-22123.png';
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        resultImg.src = url;
+        resultBox.style.display = 'block';
+        resultBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 'image/png');
+    });
+  </script>
+</body>
+</html>
