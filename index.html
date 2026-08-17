@@ -100,11 +100,42 @@
   /* cropper.js: como a area de recorte sempre cobre o quadro inteiro, nao precisamos do escurecimento */
   .cropper-modal { display: none; }
   .cropper-view-box, .cropper-face { border-radius: 0; }
+
+  .mask-toggle {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .mask-btn {
+    flex: 1;
+    padding: 14px 8px;
+    font-size: 14px;
+    font-weight: 700;
+    border: 2px solid #1c3245;
+    border-radius: 10px;
+    background: #1c3245;
+    color: #cfd8e0;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .mask-btn.active {
+    background: #FFD200;
+    border-color: #FFD200;
+    color: #12212F;
+  }
 </style>
 </head>
 <body>
   <h1>MARCIUS MACHADO 22123</h1>
   <p class="sub">Coloque a moldura na sua foto</p>
+
+  <div class="mask-toggle" id="maskToggle">
+    <button class="mask-btn active" id="btnComEuSou" type="button">COM "EU SOU"</button>
+    <button class="mask-btn" id="btnSemEuSou" type="button">SEM "EU SOU"</button>
+  </div>
 
   <div class="placeholder-box" id="placeholderBox">Sua foto vai aparecer aqui</div>
 
@@ -113,7 +144,7 @@
     <div class="img-container">
       <img id="cropImg" src="" alt="Sua foto">
     </div>
-    <img class="frame-overlay" src="images/moldura.png" alt="">
+    <img class="frame-overlay" id="frameOverlay" src="images/moldura-com-eusou.png" alt="">
   </div>
 
   <input type="file" id="fileInput" accept="image/*">
@@ -139,8 +170,32 @@
     const resultBox = document.getElementById('resultBox');
     const resultImg = document.getElementById('resultImg');
 
-    const frame = new Image();
-    frame.src = 'images/moldura.png';
+    // as duas versoes da moldura ficam pre-carregadas o tempo todo;
+    // "frame" so aponta pra qual das duas esta selecionada no momento
+    const frameComEuSou = new Image();
+    frameComEuSou.src = 'images/moldura-com-eusou.png';
+    const frameSemEuSou = new Image();
+    frameSemEuSou.src = 'images/moldura-sem-eusou.png';
+
+    let frame = frameComEuSou; // selecionada por padrao ao abrir a pagina
+
+    const frameOverlay = document.getElementById('frameOverlay');
+    const btnComEuSou = document.getElementById('btnComEuSou');
+    const btnSemEuSou = document.getElementById('btnSemEuSou');
+
+    function selecionarMascara(imagemSelecionada, caminhoImagem, botaoAtivo, botaoInativo) {
+      frame = imagemSelecionada;
+      frameOverlay.src = caminhoImagem;
+      botaoAtivo.classList.add('active');
+      botaoInativo.classList.remove('active');
+    }
+
+    btnComEuSou.addEventListener('click', () => {
+      selecionarMascara(frameComEuSou, 'images/moldura-com-eusou.png', btnComEuSou, btnSemEuSou);
+    });
+    btnSemEuSou.addEventListener('click', () => {
+      selecionarMascara(frameSemEuSou, 'images/moldura-sem-eusou.png', btnSemEuSou, btnComEuSou);
+    });
 
     let cropper = null;
 
